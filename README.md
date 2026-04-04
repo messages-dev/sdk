@@ -1,0 +1,152 @@
+# The iMessage API for agents
+
+Official TypeScript SDK for [messages.dev](https://messages.dev). Send and receive iMessage and SMS over a simple REST API from Node.js, Bun, Deno, or the browser.
+
+**[→ Read the docs](https://docs.messages.dev)**
+
+## Installation
+
+```bash
+npm install @messages-dev/sdk
+```
+
+## Get an API key
+
+1. Sign up at [app.messages.dev](https://app.messages.dev).
+2. Go to **API Keys** and click **Create Key**. Copy the `sk_live_...` key, it's only shown once.
+3. Go to **Lines**, scan the sandbox QR code with your phone, and send the activation text. Your sandbox is now paired with your number and you have 50 free messages per day.
+
+Full walkthrough: [docs.messages.dev/quickstart](https://docs.messages.dev/quickstart).
+
+## Usage
+
+```ts
+import { createClient } from "@messages-dev/sdk";
+
+const client = createClient();
+
+await client.sendMessage({
+  from: "+15551234567",
+  to: "+15559876543",
+  text: "Hello from the iMessage API!",
+});
+```
+
+The client reads `MESSAGES_API_KEY` from your environment automatically. To pass a key explicitly, use `createClient({ apiKey: "sk_live_..." })`.
+
+## What you can do
+
+Send iMessage and SMS, with attachments and reply threading:
+
+```ts
+await client.sendMessage({ from, to, text, attachments: ["file_abc"], replyTo: "msg_xyz" });
+```
+
+Reactions, typing indicators, and read receipts:
+
+```ts
+await client.sendReaction({ from, to, messageId, type: "love" });
+await client.startTyping({ from, to });
+await client.sendReadReceipt({ from, to });
+```
+
+Upload files and attach them to messages:
+
+```ts
+const file = await client.uploadFile({ from, file: buffer, filename: "photo.jpg", mimeType: "image/jpeg" });
+await client.sendMessage({ from, to, text: "Look", attachments: [file.id] });
+```
+
+List messages, chats, lines, and more with cursor pagination:
+
+```ts
+const messages = await client.listMessages({ from, to });
+
+for await (const message of messages) {
+  console.log(message.text);
+}
+```
+
+## Receiving messages
+
+Create a webhook subscription for the events you care about:
+
+```ts
+await client.createWebhook({
+  from: "+15551234567",
+  url: "https://your-app.com/webhooks",
+  events: ["message.received", "message.sent"],
+});
+```
+
+Verify incoming deliveries with `verifyWebhook`. Signatures use timing-safe HMAC-SHA256 and timestamps older than 5 minutes are rejected:
+
+```ts
+import { verifyWebhook } from "@messages-dev/sdk";
+
+app.post("/webhooks", async (req, res) => {
+  const event = await verifyWebhook(
+    req.body,
+    req.headers["x-webhook-signature"],
+    process.env.WEBHOOK_SECRET,
+  );
+
+  if (event.event === "message.received") {
+    console.log(`${event.data.sender}: ${event.data.text}`);
+  }
+
+  res.sendStatus(200);
+});
+```
+
+## Error handling
+
+All errors extend `MessagesError` with `code`, `param`, `status`, and `requestId`:
+
+```ts
+import { RateLimitError, InvalidRequestError } from "@messages-dev/sdk";
+
+try {
+  await client.sendMessage({ from, to, text });
+} catch (err) {
+  if (err instanceof RateLimitError) {
+    // back off
+  } else if (err instanceof InvalidRequestError) {
+    console.error(err.code, err.param);
+  }
+}
+```
+
+## Configuration
+
+```ts
+createClient({
+  apiKey: "sk_live_...",
+  baseUrl: "https://api.messages.dev",
+  timeout: 30_000,
+  maxRetries: 2,
+});
+```
+
+Retries use exponential backoff on 429 and 5xx responses. 4xx errors are returned immediately.
+
+## TypeScript
+
+Types ship with the package:
+
+```ts
+import type { Line, Chat, Message, Reaction, Webhook, WebhookEvent } from "@messages-dev/sdk";
+```
+
+Zod schemas (`MessageSchema`, `LineSchema`, etc.) are also exported.
+
+## Links
+
+- Documentation: [docs.messages.dev](https://docs.messages.dev)
+- API reference: [docs.messages.dev/api-reference](https://docs.messages.dev/api-reference)
+- Dashboard: [app.messages.dev](https://app.messages.dev)
+- Issues: [github.com/messages-dev/sdk/issues](https://github.com/messages-dev/sdk/issues)
+
+## License
+
+[MIT](./LICENSE)

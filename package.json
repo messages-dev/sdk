@@ -1,0 +1,41 @@
+{
+  "name": "@messages-dev/sdk",
+  "version": "0.1.0",
+  "description": "Official TypeScript SDK for the messages.dev iMessage API. Send and receive iMessage and SMS messages from Node.js, Bun, and the browser.",
+  "keywords": [
+    "imessage",
+    "imessage-api",
+    "sms",
+    "sms-api",
+    "messages",
+    "messaging",
+    "webhooks",
+    "typescript",
+    "sdk",
+    "messages-dev"
+  ],
+  "license": "MIT",
+  "homepage": "https://messages.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/messages-dev/sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/messages-dev/sdk/issues"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/bun": "latest"
+  }
+}
