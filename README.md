@@ -28,6 +28,14 @@ await client.sendMessage({
 });
 ```
 
+`createClient()` reads your key from the `MESSAGES_API_KEY` environment variable. Set it in your `.env`:
+
+```bash
+MESSAGES_API_KEY=sk_live_...
+```
+
+Or pass it explicitly: `createClient({ apiKey: "sk_live_..." })`.
+
 ## What you can do
 
 Send messages with attachments and reply threading:
