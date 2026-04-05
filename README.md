@@ -135,8 +135,8 @@ Zod schemas (`MessageSchema`, `LineSchema`, etc.) are also exported.
 
 ## Links
 
-- Documentation: [docs.messages.dev](https://docs.messages.dev)
-- API reference: [docs.messages.dev/api-reference](https://docs.messages.dev/api-reference)
+- Documentation: [messages.dev/docs](https://messages.dev/docs)
+- API reference: [messages.dev/docs/api-reference](https://messages.dev/docs/api-reference)
 - Dashboard: [app.messages.dev](https://app.messages.dev)
 - Issues: [github.com/messages-dev/sdk/issues](https://github.com/messages-dev/sdk/issues)
 
