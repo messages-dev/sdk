@@ -21,6 +21,7 @@ import type {
   TypingParams,
   SendReadReceiptParams,
   UploadFileParams,
+  SendContactCardParams,
   ListChatsParams,
   ListMessagesParams,
   ListReactionsParams,
@@ -29,6 +30,7 @@ import type {
   ListWebhooksParams,
   CreateWebhookParams,
 } from "./types.js";
+import { buildVCard } from "./vcard.js";
 
 export function createClient(config: ClientConfig = {}): MessagesClient {
   const envKey =
@@ -97,6 +99,27 @@ export function createClient(config: ClientConfig = {}): MessagesClient {
           ...(params.filename ? { "X-Filename": params.filename } : {}),
         },
         schema: FileSchema,
+      });
+    },
+
+    async sendContactCard(params: SendContactCardParams) {
+      const vcard = await buildVCard(params);
+      const filename =
+        params.filename ??
+        `${params.firstName}-${params.lastName}.vcf`
+          .toLowerCase()
+          .replace(/\s+/g, "-");
+      const file = await client.uploadFile({
+        file: new Blob([vcard], { type: "text/vcard" }),
+        filename,
+        mimeType: "text/vcard",
+      });
+      return client.sendMessage({
+        from: params.from,
+        to: params.to,
+        text: params.text,
+        attachments: [file.id],
+        replyTo: params.replyTo,
       });
     },
 

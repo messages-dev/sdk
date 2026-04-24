@@ -476,3 +476,196 @@ test("createWebhook sends correct request", async () => {
   expect(result.isActive).toBe(true);
   expect(result.secret).toBe("whsec_123");
 });
+
+test("sendContactCard uploads vCard then sends message", async () => {
+  let uploadedBody: string | undefined;
+  let uploadedFilename: string | undefined;
+  let uploadedMime: string | undefined;
+  let sendBody: any;
+
+  mockFetch(async (req) => {
+    const path = new URL(req.url).pathname;
+    if (path === "/v1/files") {
+      uploadedMime = req.headers.get("Content-Type") ?? undefined;
+      uploadedFilename = req.headers.get("X-Filename") ?? undefined;
+      uploadedBody = await req.text();
+      return new Response(
+        JSON.stringify({
+          id: "file_vcard123",
+          url: "https://storage.example.com/jane.vcf",
+          filename: uploadedFilename,
+          mime_type: "text/vcard",
+          size: uploadedBody.length,
+          request_id: "req_file",
+        }),
+        { status: 201 },
+      );
+    }
+    if (path === "/v1/messages") {
+      sendBody = await req.json();
+      return new Response(
+        JSON.stringify({
+          id: "obx_contact123",
+          status: "pending",
+          request_id: "req_msg",
+        }),
+        { status: 201 },
+      );
+    }
+    throw new Error(`unexpected path: ${path}`);
+  });
+
+  const client = createClient({ apiKey: "sk_live_test" });
+  const result = await client.sendContactCard({
+    from: "+15551234567",
+    to: "+15559876543",
+    text: "Here's Jane's info:",
+    firstName: "Jane",
+    lastName: "Doe",
+    phones: [
+      { type: "cell", value: "+15559876543" },
+      { type: "work", value: "+15551112222" },
+    ],
+    emails: [{ value: "jane@acme.com" }],
+    org: "Acme Corp",
+    title: "Head of Eng",
+  });
+
+  expect(uploadedMime).toBe("text/vcard");
+  expect(uploadedFilename).toBe("jane-doe.vcf");
+  expect(uploadedBody).toContain("BEGIN:VCARD");
+  expect(uploadedBody).toContain("VERSION:3.0");
+  expect(uploadedBody).toContain("FN:Jane Doe");
+  expect(uploadedBody).toContain("N:Doe;Jane;;;");
+  expect(uploadedBody).toContain("TEL;TYPE=CELL:+15559876543");
+  expect(uploadedBody).toContain("TEL;TYPE=WORK:+15551112222");
+  expect(uploadedBody).toContain("EMAIL:jane@acme.com");
+  expect(uploadedBody).toContain("ORG:Acme Corp");
+  expect(uploadedBody).toContain("TITLE:Head of Eng");
+  expect(uploadedBody).toContain("END:VCARD");
+  expect(uploadedBody!.endsWith("END:VCARD")).toBe(true);
+  expect(uploadedBody).toContain("\r\n");
+
+  expect(sendBody.from).toBe("+15551234567");
+  expect(sendBody.to).toBe("+15559876543");
+  expect(sendBody.text).toBe("Here's Jane's info:");
+  expect(sendBody.attachments).toEqual(["file_vcard123"]);
+
+  expect(result.id).toBe("obx_contact123");
+  expect(result.status).toBe("pending");
+});
+
+test("sendContactCard escapes reserved characters in field values", async () => {
+  let uploadedBody: string | undefined;
+
+  mockFetch(async (req) => {
+    const path = new URL(req.url).pathname;
+    if (path === "/v1/files") {
+      uploadedBody = await req.text();
+      return new Response(
+        JSON.stringify({
+          id: "file_abc",
+          url: "https://storage.example.com/x.vcf",
+          filename: "x.vcf",
+          mime_type: "text/vcard",
+          size: uploadedBody.length,
+          request_id: "req_file",
+        }),
+        { status: 201 },
+      );
+    }
+    return new Response(
+      JSON.stringify({ id: "obx_1", status: "pending", request_id: "r" }),
+      { status: 201 },
+    );
+  });
+
+  const client = createClient({ apiKey: "sk_live_test" });
+  await client.sendContactCard({
+    from: "+15551234567",
+    to: "+15559876543",
+    firstName: "Jane",
+    lastName: "Doe",
+    note: "Hi; hello, world\nline2",
+  });
+
+  expect(uploadedBody).toContain("NOTE:Hi\\; hello\\, world\\nline2");
+});
+
+test("sendContactCard encodes photo Blob as base64 with sniffed type", async () => {
+  let uploadedBody: string | undefined;
+
+  mockFetch(async (req) => {
+    const path = new URL(req.url).pathname;
+    if (path === "/v1/files") {
+      uploadedBody = await req.text();
+      return new Response(
+        JSON.stringify({
+          id: "file_abc",
+          url: "https://storage.example.com/x.vcf",
+          filename: "x.vcf",
+          mime_type: "text/vcard",
+          size: uploadedBody.length,
+          request_id: "req_file",
+        }),
+        { status: 201 },
+      );
+    }
+    return new Response(
+      JSON.stringify({ id: "obx_1", status: "pending", request_id: "r" }),
+      { status: 201 },
+    );
+  });
+
+  // PNG magic bytes + a few trailing bytes
+  const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const client = createClient({ apiKey: "sk_live_test" });
+  await client.sendContactCard({
+    from: "+15551234567",
+    to: "+15559876543",
+    firstName: "Jane",
+    lastName: "Doe",
+    photo: new Blob([pngBytes], { type: "image/png" }),
+  });
+
+  const expectedB64 = Buffer.from(pngBytes).toString("base64");
+  expect(uploadedBody).toContain(`PHOTO;ENCODING=b;TYPE=PNG:${expectedB64}`);
+});
+
+test("sendContactCard respects explicit filename override", async () => {
+  let uploadedFilename: string | undefined;
+
+  mockFetch(async (req) => {
+    const path = new URL(req.url).pathname;
+    if (path === "/v1/files") {
+      uploadedFilename = req.headers.get("X-Filename") ?? undefined;
+      await req.text();
+      return new Response(
+        JSON.stringify({
+          id: "file_abc",
+          url: "https://storage.example.com/x.vcf",
+          filename: uploadedFilename,
+          mime_type: "text/vcard",
+          size: 0,
+          request_id: "req_file",
+        }),
+        { status: 201 },
+      );
+    }
+    return new Response(
+      JSON.stringify({ id: "obx_1", status: "pending", request_id: "r" }),
+      { status: 201 },
+    );
+  });
+
+  const client = createClient({ apiKey: "sk_live_test" });
+  await client.sendContactCard({
+    from: "+15551234567",
+    to: "+15559876543",
+    firstName: "Jane",
+    lastName: "Doe",
+    filename: "custom-name.vcf",
+  });
+
+  expect(uploadedFilename).toBe("custom-name.vcf");
+});

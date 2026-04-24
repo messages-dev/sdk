@@ -66,6 +66,55 @@ export interface UploadFileParams {
   mimeType?: string;
 }
 
+export interface ContactPhone {
+  value: string;
+  /** e.g. "cell", "work", "home", "main", "fax". Default: "cell". */
+  type?: string;
+}
+
+export interface ContactEmail {
+  value: string;
+  /** e.g. "work", "home". No default. */
+  type?: string;
+}
+
+export interface ContactAddress {
+  street?: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+  country?: string;
+  /** e.g. "work", "home". No default. */
+  type?: string;
+}
+
+export interface SendContactCardParams {
+  from: string;
+  to: string;
+  /** Optional message text sent alongside the card. */
+  text?: string;
+  replyTo?: string;
+
+  firstName: string;
+  lastName: string;
+  phones?: ContactPhone[];
+  emails?: ContactEmail[];
+  org?: string;
+  title?: string;
+  url?: string;
+  address?: ContactAddress;
+  /** ISO date, YYYY-MM-DD. */
+  bday?: string;
+  note?: string;
+  /** Contact photo. Base64 strings are passed through as-is; Blob/Buffer/Uint8Array are encoded automatically. */
+  photo?: Blob | Buffer | Uint8Array | string;
+  /** Override the photo mime type. Auto-detected from bytes or Blob.type when omitted. */
+  photoType?: "JPEG" | "PNG";
+
+  /** Filename for the uploaded .vcf. Default: "<first>-<last>.vcf". */
+  filename?: string;
+}
+
 export interface ListChatsParams {
   from: string;
   limit?: number;
@@ -121,6 +170,7 @@ export interface MessagesClient {
   stopTyping(params: TypingParams): Promise<OutboxItem>;
   sendReadReceipt(params: SendReadReceiptParams): Promise<OutboxItem>;
   uploadFile(params: UploadFileParams): Promise<File>;
+  sendContactCard(params: SendContactCardParams): Promise<OutboxItem>;
 
   listLines(): Promise<PaginatedResponse<Line>>;
   listChats(params: ListChatsParams): Promise<PaginatedResponse<Chat>>;
