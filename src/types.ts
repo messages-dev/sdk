@@ -88,14 +88,14 @@ export interface ContactAddress {
   type?: string;
 }
 
-export interface SendVoiceNoteParams {
+export interface SendAudioMessageParams {
   from: string;
   to: string;
   /**
    * Pre-uploaded file ID (`file_…`) OR raw audio bytes. When bytes are
    * passed the SDK uploads via `POST /v1/files` first.
    */
-  voiceNote: string | Blob | Buffer | Uint8Array;
+  audioMessage: string | Blob | Buffer | Uint8Array;
   /** Mime type when passing raw bytes. Default: `audio/mpeg`. */
   mimeType?: string;
   /** Filename when passing raw bytes. */
@@ -187,7 +187,7 @@ export interface MessagesClient {
   sendReadReceipt(params: SendReadReceiptParams): Promise<OutboxItem>;
   uploadFile(params: UploadFileParams): Promise<File>;
   sendContactCard(params: SendContactCardParams): Promise<OutboxItem>;
-  sendVoiceNote(params: SendVoiceNoteParams): Promise<OutboxItem>;
+  sendAudioMessage(params: SendAudioMessageParams): Promise<OutboxItem>;
 
   listLines(): Promise<PaginatedResponse<Line>>;
   listChats(params: ListChatsParams): Promise<PaginatedResponse<Chat>>;

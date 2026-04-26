@@ -22,7 +22,7 @@ import type {
   SendReadReceiptParams,
   UploadFileParams,
   SendContactCardParams,
-  SendVoiceNoteParams,
+  SendAudioMessageParams,
   ListChatsParams,
   ListMessagesParams,
   ListReactionsParams,
@@ -103,31 +103,31 @@ export function createClient(config: ClientConfig = {}): MessagesClient {
       });
     },
 
-    async sendVoiceNote(params: SendVoiceNoteParams) {
+    async sendAudioMessage(params: SendAudioMessageParams) {
       // Accept either a pre-uploaded file ID or raw audio bytes. When given
       // bytes we upload through the standard /v1/files path first, then send
       // the resulting file ID — matching the sendContactCard flow.
       let fileId: string;
-      if (typeof params.voiceNote === "string") {
-        if (!params.voiceNote.startsWith("file_")) {
+      if (typeof params.audioMessage === "string") {
+        if (!params.audioMessage.startsWith("file_")) {
           throw new Error(
-            `Invalid voiceNote: expected a file ID like "file_…" or raw audio bytes (Blob, Buffer, Uint8Array).`,
+            `Invalid audioMessage: expected a file ID like "file_…" or raw audio bytes (Blob, Buffer, Uint8Array).`,
           );
         }
-        fileId = params.voiceNote;
+        fileId = params.audioMessage;
       } else {
         const file = await client.uploadFile({
-          file: params.voiceNote,
+          file: params.audioMessage,
           mimeType: params.mimeType ?? "audio/mpeg",
           filename: params.filename,
         });
         fileId = file.id;
       }
-      return http.request("POST", "/v1/voice-notes", {
+      return http.request("POST", "/v1/audio-messages", {
         body: {
           from: params.from,
           to: params.to,
-          voice_note: fileId,
+          audio_message: fileId,
           ...(params.replyTo ? { reply_to: params.replyTo } : {}),
         },
         schema: OutboxItemSchema,

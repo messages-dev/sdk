@@ -670,8 +670,8 @@ test("sendContactCard respects explicit filename override", async () => {
   expect(uploadedFilename).toBe("custom-name.vcf");
 });
 
-test("sendVoiceNote with a pre-uploaded file ID skips the upload", async () => {
-  let voiceNoteBody: any;
+test("sendAudioMessage with a pre-uploaded file ID skips the upload", async () => {
+  let audioMessageBody: any;
   let uploadCalls = 0;
 
   mockFetch(async (req) => {
@@ -680,14 +680,14 @@ test("sendVoiceNote with a pre-uploaded file ID skips the upload", async () => {
       uploadCalls++;
       throw new Error("should not upload when given a file ID");
     }
-    if (path === "/v1/voice-notes") {
+    if (path === "/v1/audio-messages") {
       expect(req.method).toBe("POST");
-      voiceNoteBody = await req.json();
+      audioMessageBody = await req.json();
       return new Response(
         JSON.stringify({
-          id: "obx_voice123",
+          id: "obx_audio123",
           status: "pending",
-          request_id: "req_voice",
+          request_id: "req_audio",
         }),
         { status: 201 },
       );
@@ -696,27 +696,27 @@ test("sendVoiceNote with a pre-uploaded file ID skips the upload", async () => {
   });
 
   const client = createClient({ apiKey: "sk_live_test" });
-  const result = await client.sendVoiceNote({
+  const result = await client.sendAudioMessage({
     from: "+15551234567",
     to: "+15559876543",
-    voiceNote: "file_existing",
+    audioMessage: "file_existing",
     replyTo: "msg_abc",
   });
 
   expect(uploadCalls).toBe(0);
-  expect(voiceNoteBody.from).toBe("+15551234567");
-  expect(voiceNoteBody.to).toBe("+15559876543");
-  expect(voiceNoteBody.voice_note).toBe("file_existing");
-  expect(voiceNoteBody.reply_to).toBe("msg_abc");
-  expect(result.id).toBe("obx_voice123");
+  expect(audioMessageBody.from).toBe("+15551234567");
+  expect(audioMessageBody.to).toBe("+15559876543");
+  expect(audioMessageBody.audio_message).toBe("file_existing");
+  expect(audioMessageBody.reply_to).toBe("msg_abc");
+  expect(result.id).toBe("obx_audio123");
   expect(result.status).toBe("pending");
 });
 
-test("sendVoiceNote uploads raw bytes then sends", async () => {
+test("sendAudioMessage uploads raw bytes then sends", async () => {
   let uploadedBody: ArrayBuffer | undefined;
   let uploadedMime: string | undefined;
   let uploadedFilename: string | undefined;
-  let voiceNoteBody: any;
+  let audioMessageBody: any;
 
   mockFetch(async (req) => {
     const path = new URL(req.url).pathname;
@@ -736,13 +736,13 @@ test("sendVoiceNote uploads raw bytes then sends", async () => {
         { status: 201 },
       );
     }
-    if (path === "/v1/voice-notes") {
-      voiceNoteBody = await req.json();
+    if (path === "/v1/audio-messages") {
+      audioMessageBody = await req.json();
       return new Response(
         JSON.stringify({
-          id: "obx_voice456",
+          id: "obx_audio456",
           status: "pending",
-          request_id: "req_voice",
+          request_id: "req_audio",
         }),
         { status: 201 },
       );
@@ -752,10 +752,10 @@ test("sendVoiceNote uploads raw bytes then sends", async () => {
 
   const audio = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
   const client = createClient({ apiKey: "sk_live_test" });
-  const result = await client.sendVoiceNote({
+  const result = await client.sendAudioMessage({
     from: "+15551234567",
     to: "+15559876543",
-    voiceNote: audio,
+    audioMessage: audio,
     mimeType: "audio/mp4",
     filename: "hello.m4a",
   });
@@ -764,15 +764,15 @@ test("sendVoiceNote uploads raw bytes then sends", async () => {
   expect(uploadedFilename).toBe("hello.m4a");
   expect(new Uint8Array(uploadedBody!)).toEqual(audio);
 
-  expect(voiceNoteBody.from).toBe("+15551234567");
-  expect(voiceNoteBody.to).toBe("+15559876543");
-  expect(voiceNoteBody.voice_note).toBe("file_audio456");
-  expect(voiceNoteBody.reply_to).toBeUndefined();
+  expect(audioMessageBody.from).toBe("+15551234567");
+  expect(audioMessageBody.to).toBe("+15559876543");
+  expect(audioMessageBody.audio_message).toBe("file_audio456");
+  expect(audioMessageBody.reply_to).toBeUndefined();
 
-  expect(result.id).toBe("obx_voice456");
+  expect(result.id).toBe("obx_audio456");
 });
 
-test("sendVoiceNote defaults mime type to audio/mpeg", async () => {
+test("sendAudioMessage defaults mime type to audio/mpeg", async () => {
   let uploadedMime: string | undefined;
 
   mockFetch(async (req) => {
@@ -799,26 +799,26 @@ test("sendVoiceNote defaults mime type to audio/mpeg", async () => {
   });
 
   const client = createClient({ apiKey: "sk_live_test" });
-  await client.sendVoiceNote({
+  await client.sendAudioMessage({
     from: "+15551234567",
     to: "+15559876543",
-    voiceNote: new Uint8Array([0]),
+    audioMessage: new Uint8Array([0]),
   });
 
   expect(uploadedMime).toBe("audio/mpeg");
 });
 
-test("sendVoiceNote rejects strings that aren't file IDs", async () => {
+test("sendAudioMessage rejects strings that aren't file IDs", async () => {
   mockFetch(async () => {
     throw new Error("should not hit the network");
   });
 
   const client = createClient({ apiKey: "sk_live_test" });
   await expect(
-    client.sendVoiceNote({
+    client.sendAudioMessage({
       from: "+15551234567",
       to: "+15559876543",
-      voiceNote: "/local/path/to/clip.m4a",
+      audioMessage: "/local/path/to/clip.m4a",
     }),
-  ).rejects.toThrow(/Invalid voiceNote/);
+  ).rejects.toThrow(/Invalid audioMessage/);
 });
