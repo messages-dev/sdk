@@ -131,12 +131,33 @@ export const DeletedResponseSchema = z.object({
 // number / Apple ID, on every event) and `chat_id` (on reactions, since the
 // reactions table itself only references the parent message).
 
-export const MessageEventDataSchema = MessageSchema.extend({
+// Webhook event payload shapes are intentionally narrower than the GET-response
+// shapes — the deliver pipeline only emits the fields a consumer actually needs.
+// Keep them decoupled from MessageSchema/ReactionSchema so SDK consumers don't
+// see false "required field" errors.
+export const MessageEventDataSchema = z.object({
+  id: z.string(),
+  chat_id: z.string(),
+  guid: z.string(),
+  sender: z.string(),
+  text: z.string().nullish(),
+  attachments: z.array(AttachmentSchema),
+  is_from_me: z.boolean(),
+  is_audio_message: z.boolean().nullish(),
+  sent_at: z.number(),
+  reply_to_guid: z.string().nullish(),
   line_handle: z.string(),
 });
 
-export const ReactionEventDataSchema = ReactionSchema.extend({
+export const ReactionEventDataSchema = z.object({
+  id: z.string(),
+  message_id: z.string(),
   chat_id: z.string(),
+  type: z.string(),
+  sender: z.string(),
+  is_from_me: z.boolean(),
+  added: z.boolean(),
+  sent_at: z.number(),
   line_handle: z.string(),
 });
 
