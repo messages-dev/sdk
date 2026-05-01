@@ -456,7 +456,7 @@ test("createWebhook sends correct request", async () => {
     return new Response(
       JSON.stringify({
         id: "wh_123",
-        line_id: "ln_123",
+        line_ids: ["ln_123"],
         url: "https://example.com/hook",
         events: ["message.received"],
         is_active: true,
